@@ -49,5 +49,5 @@ jobs:
           curl --location --request POST 'https://api.getpostman.com/import/openapi' \
           --header "X-Api-Key: $POSTMAN_API_KEY" \
           --header "Content-Type: application/json" \
-          --data-raw "{\"input\":\"${OPENAPI_CONTENT}\", \"type\": \"yaml\", \"workspace\": \"$POSTMAN_WORKSPACE_ID\"}"
+          --data-raw "{\"input\":\"${OPENAPI_CONTENT}\", \"type\": \"string\", \"workspace\": \"$POSTMAN_WORKSPACE_ID\"}"
 
