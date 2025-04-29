@@ -45,9 +45,13 @@ jobs:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
           POSTMAN_WORKSPACE_ID: ${{ secrets.POSTMAN_WORKSPACE_ID }}
         run: |
-          OPENAPI_CONTENT=$(cat openapi.yaml | base64 | tr -d '\n')
+          OPENAPI_CONTENT=$(cat openapi.yaml)
           curl --location --request POST 'https://api.getpostman.com/import/openapi' \
           --header "X-Api-Key: $POSTMAN_API_KEY" \
           --header "Content-Type: application/json" \
-          --data-raw "{\"input\":\"${OPENAPI_CONTENT}\", \"type\": \"string\", \"workspace\": \"$POSTMAN_WORKSPACE_ID\"}"
-
+          --data-raw "$(jq -n \
+            --arg input "$OPENAPI_CONTENT" \
+            --arg type "string" \
+            --arg workspace "$POSTMAN_WORKSPACE_ID" \
+            '{input: $input, type: $type, workspace: $workspace}')"
+      
