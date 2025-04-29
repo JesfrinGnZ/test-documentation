@@ -1,0 +1,53 @@
+name: Generate OpenAPI and Update Postman Collection
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  generate-upload-openapi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build project
+        run: mvn clean package -DskipTests
+
+      - name: Run application in background
+        run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          echo $! > app.pid
+
+      - name: Wait for application to start
+        run: |
+          echo "Esperando que la aplicación esté disponible..."
+          sleep 30
+
+      - name: Download OpenAPI spec
+        run: |
+          curl http://localhost:8080/v3/api-docs.yaml -o openapi.yaml
+
+      - name: Stop application
+        run: |
+          kill $(cat app.pid)
+
+      - name: Upload OpenAPI to Postman
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          POSTMAN_WORKSPACE_ID: ${{ secrets.POSTMAN_WORKSPACE_ID }}
+        run: |
+          OPENAPI_CONTENT=$(cat openapi.yaml | base64 | tr -d '\n')
+          curl --location --request POST 'https://api.getpostman.com/import/openapi' \
+          --header "X-Api-Key: $POSTMAN_API_KEY" \
+          --header "Content-Type: application/json" \
+          --data-raw "{\"input\":\"${OPENAPI_CONTENT}\", \"type\": \"yaml\", \"workspace\": \"$POSTMAN_WORKSPACE_ID\"}"
+
