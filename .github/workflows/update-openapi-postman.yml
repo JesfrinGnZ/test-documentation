@@ -1,4 +1,4 @@
-name: Generate OpenAPI and Update Postman Collection
+name: Generate OpenAPI and Upload to Postman & Apidog
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - develop
 
 jobs:
-  generate-upload-openapi:
+  build-and-upload:
     runs-on: ubuntu-latest
 
     steps:
@@ -45,6 +45,7 @@ jobs:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
           POSTMAN_WORKSPACE_ID: ${{ secrets.POSTMAN_WORKSPACE_ID }}
         run: |
+          echo "📤 Subiendo a Postman..."
           OPENAPI_CONTENT=$(cat openapi.yaml)
           curl --location --request POST 'https://api.getpostman.com/import/openapi' \
           --header "X-Api-Key: $POSTMAN_API_KEY" \
@@ -54,4 +55,23 @@ jobs:
             --arg type "string" \
             --arg workspace "$POSTMAN_WORKSPACE_ID" \
             '{input: $input, type: $type, workspace: $workspace}')"
-      
+
+      - name: Upload OpenAPI to Apidog
+        env:
+          APIDOG_TOKEN: ${{ secrets.APIDOG_TOKEN }}
+          APIDOG_PROJECT_ID: ${{ secrets.APIDOG_PROJECT_ID }}
+        run: |
+          echo "📤 Subiendo a Apidog..."
+          OPENAPI_CONTENT=$(cat openapi.yaml | jq -Rs .)
+          curl --location --request POST "https://api.apidog.com/v1/projects/${APIDOG_PROJECT_ID}/import-openapi" \
+          --header "Authorization: Bearer $APIDOG_TOKEN" \
+          --header "X-Apidog-Api-Version: 2024-03-28" \
+          --header "Content-Type: application/json" \
+          --data-raw "{
+            \"input\": $OPENAPI_CONTENT,
+            \"options\": {
+              \"endpointOverwriteBehavior\": \"OVERWRITE_EXISTING\",
+              \"schemaOverwriteBehavior\": \"OVERWRITE_EXISTING\",
+              \"updateFolderOfChangedEndpoint\": false
+            }
+          }"
